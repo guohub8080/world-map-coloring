@@ -1,27 +1,37 @@
 import { atom } from "jotai";
 import { atomWithStorage } from "jotai/utils";
 import { worldFeatures } from "../lib/worldData";
+import { createDebouncedStorage } from "../lib/debouncedStorage";
+
+// 所有持久化 atom 统一用节流 storage：读同步（无闪烁），写 debounce（高频拖动不卡）
+// getOnInit:true 让首屏直接用 localStorage 值初始化，避免闪烁
+// 每个类型单独建 storage 实例，确保 atomWithStorage 重载走「同步」分支
+const Fills = createDebouncedStorage<Record<string, string>>();
+const Str = createDebouncedStorage<string>();
+const Num = createDebouncedStorage<number>();
+const Bool = createDebouncedStorage<boolean>();
+const ON_INIT = { getOnInit: true } as const;
 
 /** 填色状态：内部以国家中文名为键（与数据要素对应） */
-export const fillsAtom = atomWithStorage<Record<string, string>>("wmf:fills", {});
+export const fillsAtom = atomWithStorage<Record<string, string>>("wmf:fills", {}, Fills, ON_INIT);
 
 /** 撤销历史（不持久化） */
 export const historyAtom = atom<Record<string, string>[]>([]);
 
 /** 当前画笔颜色 */
-export const currentColorAtom = atomWithStorage<string>("wmf:color", "#3b82f6");
+export const currentColorAtom = atomWithStorage<string>("wmf:color", "#3b82f6", Str, ON_INIT);
 
 /** 橡皮擦模式 */
 export const eraserAtom = atom<boolean>(false);
 
 /** 投影 */
-export const projectionIdAtom = atomWithStorage<string>("wmf:projection", "natural-earth");
+export const projectionIdAtom = atomWithStorage<string>("wmf:projection", "natural-earth", Str, ON_INIT);
 
 /** 中心经度 */
-export const centerLonAtom = atomWithStorage<number>("wmf:center", 105);
+export const centerLonAtom = atomWithStorage<number>("wmf:center", 105, Num, ON_INIT);
 
 /** 中心纬度（投影旋转/中心；圆锥投影同时联动标准纬线） */
-export const centerLatAtom = atomWithStorage<number>("wmf:centerlat", 0);
+export const centerLatAtom = atomWithStorage<number>("wmf:centerlat", 0, Num, ON_INIT);
 
 /** 重置中心经纬度（105°E / 0°） */
 export const resetCenterAtom = atom(null, (_get, set) => {
@@ -30,23 +40,23 @@ export const resetCenterAtom = atom(null, (_get, set) => {
 });
 
 /** 地图标题 */
-export const mapTitleAtom = atomWithStorage<string>("wmf:title", "");
+export const mapTitleAtom = atomWithStorage<string>("wmf:title", "", Str, ON_INIT);
 
 /** 导出是否含图例 */
-export const withLegendAtom = atomWithStorage<boolean>("wmf:legend", true);
+export const withLegendAtom = atomWithStorage<boolean>("wmf:legend", true, Bool, ON_INIT);
 
 /** 导出 SVG 的 viewBox 尺寸（最终生成 viewBox="0 0 w h"）；屏幕上地图也按此比例显示 */
-export const exportWidthAtom = atomWithStorage<number>("wmf:exportW", 1600);
-export const exportHeightAtom = atomWithStorage<number>("wmf:exportH", 900);
+export const exportWidthAtom = atomWithStorage<number>("wmf:exportW", 1600, Num, ON_INIT);
+export const exportHeightAtom = atomWithStorage<number>("wmf:exportH", 900, Num, ON_INIT);
 
 /** 地图内容四周留白（viewBox 单位），上下左右统一 */
-export const exportPaddingAtom = atomWithStorage<number>("wmf:exportPad", 10);
+export const exportPaddingAtom = atomWithStorage<number>("wmf:exportPad", 10, Num, ON_INIT);
 
 /** 样式设置 */
-export const landColorAtom = atomWithStorage<string>("wmf:land", "#e8e4da");
-export const seaColorAtom = atomWithStorage<string>("wmf:sea", "#cfe8f3");
-export const borderColorAtom = atomWithStorage<string>("wmf:border", "#9ca3af");
-export const borderWidthAtom = atomWithStorage<number>("wmf:borderW", 0.6);
+export const landColorAtom = atomWithStorage<string>("wmf:land", "#e8e4da", Str, ON_INIT);
+export const seaColorAtom = atomWithStorage<string>("wmf:sea", "#cfe8f3", Str, ON_INIT);
+export const borderColorAtom = atomWithStorage<string>("wmf:border", "#9ca3af", Str, ON_INIT);
+export const borderWidthAtom = atomWithStorage<number>("wmf:borderW", 0.6, Num, ON_INIT);
 
 /** 导入面板展开状态（不持久化） */
 export const showImportAtom = atom<boolean>(false);
