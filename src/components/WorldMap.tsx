@@ -1,4 +1,4 @@
-import { memo, useMemo, useRef, useState, useCallback, useEffect } from "react";
+import { memo, useMemo, useRef, useState, useCallback, useEffect, useDeferredValue } from "react";
 import { geoPath } from "d3-geo";
 import { useAtomValue, useSetAtom } from "jotai";
 import { worldFeatures, dashFeatures, worldFeatureCollection } from "../lib/worldData";
@@ -67,6 +67,14 @@ export default function WorldMap() {
   const borderWidth = useAtomValue(borderWidthAtom);
   const eraser = useAtomValue(eraserAtom);
   const isMobile = useIsMobile();
+
+  // 全局样式颜色/粗细用 useDeferredValue 延迟应用：色轮拖动是高频更新，
+  // 直接应用到 200+ path 会卡顿。延迟到浏览器空闲帧再渲染，交互始终流畅。
+  // （仅影响屏幕显示，导出走独立代码路径，不受影响）
+  const deferredDefaultColor = useDeferredValue(defaultColor);
+  const deferredSeaColor = useDeferredValue(seaColor);
+  const deferredBorderColor = useDeferredValue(borderColor);
+  const deferredBorderWidth = useDeferredValue(borderWidth);
 
   const hoverColor = eraser ? "#fecaca" : "#fde68a";
 
@@ -231,16 +239,16 @@ export default function WorldMap() {
       >
         <g transform={`translate(${view.x},${view.y}) scale(${view.k})`}>
           {/* 海洋底色：只覆盖画布（viewBox）本身，随缩放平移一起移动；画布外信箱区保持深色 */}
-          <rect x={0} y={0} width={W} height={H} fill={seaColor} />
+          <rect x={0} y={0} width={W} height={H} fill={deferredSeaColor} />
           {paths.countries.map((p) => (
             <CountryPath
               key={p.name}
               name={p.name}
               fullName={p.fullName}
               d={p.d}
-              fill={fills[p.name] || defaultColor}
-              stroke={borderColor}
-              strokeWidth={borderWidth / view.k}
+              fill={fills[p.name] || deferredDefaultColor}
+              stroke={deferredBorderColor}
+              strokeWidth={deferredBorderWidth / view.k}
               hovered={hovered === p.fullName}
               hoverColor={hoverColor}
               onPointerDown={onCountryPointerDown}
@@ -251,7 +259,7 @@ export default function WorldMap() {
           ))}
           {/* 南海十段线（不可填色，随边界色绘制） */}
           {paths.dashes.map((d, i) => (
-            <path key={`dash-${i}`} d={d} fill={borderColor} stroke="none" pointerEvents="none" />
+            <path key={`dash-${i}`} d={d} fill={deferredBorderColor} stroke="none" pointerEvents="none" />
           ))}
         </g>
       </svg>
