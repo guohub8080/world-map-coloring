@@ -1,7 +1,5 @@
 import { geoArea } from "d3-geo";
 import rewind from "@turf/rewind";
-import worldData from "../assets/world_cn.json";
-import dashData from "../assets/dashline.json";
 
 /**
  * 底图数据说明（详见 src/assets/README.md）：
@@ -67,10 +65,41 @@ function prepare(fc: GeoJSON.FeatureCollection): CountryFeature[] {
   return rewound.features;
 }
 
-export const worldFeatures = prepare(worldData as unknown as GeoJSON.FeatureCollection);
-export const dashFeatures = prepare(dashData as unknown as GeoJSON.FeatureCollection);
+// 数据放在 public/data/，运行时 fetch 拉取（不再打包进 JS）
+// 用 base 兼容 GitHub Pages 子路径部署（base: './' 已配，运行时 import.meta.env.BASE_URL）
+const DATA_BASE = `${import.meta.env.BASE_URL}data/`;
+
+// 全局单例：数据只加载一次，加载完成后填充以下导出的可变数组
+export const worldFeatures: CountryFeature[] = [];
+export const dashFeatures: CountryFeature[] = [];
 
 export const worldFeatureCollection: GeoJSON.FeatureCollection = {
   type: "FeatureCollection",
   features: worldFeatures as unknown as GeoJSON.Feature[],
 };
+
+let loadPromise: Promise<void> | null = null;
+
+/** 异步加载地图数据。已加载则立即返回；加载完成后填充上面的导出数组。 */
+export function ensureWorldDataLoaded(): Promise<void> {
+  if (loadPromise) return loadPromise;
+  loadPromise = (async () => {
+    const [worldRes, dashRes] = await Promise.all([
+      fetch(`${DATA_BASE}world_cn.json`),
+      fetch(`${DATA_BASE}dashline.json`),
+    ]);
+    if (!worldRes.ok) throw new Error(`加载 world_cn.json 失败: ${worldRes.status}`);
+    if (!dashRes.ok) throw new Error(`加载 dashline.json 失败: ${dashRes.status}`);
+    const [worldData, dashData] = await Promise.all([
+      worldRes.json() as Promise<GeoJSON.FeatureCollection>,
+      dashRes.json() as Promise<GeoJSON.FeatureCollection>,
+    ]);
+    worldFeatures.push(...prepare(worldData));
+    dashFeatures.push(...prepare(dashData));
+    // 同步填充 FeatureCollection 的 features 引用
+    (worldFeatureCollection.features as GeoJSON.Feature[]).push(
+      ...(worldFeatures as unknown as GeoJSON.Feature[])
+    );
+  })();
+  return loadPromise;
+}

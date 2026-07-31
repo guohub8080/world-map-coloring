@@ -53,15 +53,21 @@ export const showImportAtom = atom<boolean>(false);
 
 // ---------- 派生 ----------
 
-/** 中文名 → ISO-3 映射表 */
+/** 中文名 → ISO-3 映射表（惰性构建：数据异步加载后首次用到时填充） */
 const nameToIso: Record<string, string> = {};
-for (const f of worldFeatures) {
-  const p = f.properties as { name: string; iso_a3?: string };
-  if (p.iso_a3) nameToIso[p.name] = p.iso_a3;
+let nameToIsoBuilt = false;
+function ensureNameToIso() {
+  if (nameToIsoBuilt) return;
+  nameToIsoBuilt = true;
+  for (const f of worldFeatures) {
+    const p = f.properties as { name: string; iso_a3?: string };
+    if (p.iso_a3) nameToIso[p.name] = p.iso_a3;
+  }
 }
 
 /** 当前填色的 ISO-3 键 JSON（派生，实时同步） */
 export const isoJsonAtom = atom((get) => {
+  ensureNameToIso();
   const fills = get(fillsAtom);
   const out: Record<string, string> = {};
   for (const [name, color] of Object.entries(fills)) {

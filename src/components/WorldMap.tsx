@@ -10,8 +10,6 @@ import {
 } from "../atoms/mapAtoms";
 import { useIsMobile } from "../hooks/useIsMobile";
 
-const features = worldFeatures;
-
 interface View { x: number; y: number; k: number }
 
 export default function WorldMap() {
@@ -52,7 +50,7 @@ export default function WorldMap() {
     );
     const pathGen = geoPath(projection);
     return {
-      countries: features.map((f) => ({
+      countries: worldFeatures.map((f) => ({
         name: f.properties.name,
         fullName: f.properties.full_name || f.properties.name,
         d: pathGen(f as unknown as GeoJSON.Feature) || "",
@@ -106,21 +104,24 @@ export default function WorldMap() {
     pointers.current.set(e.pointerId, getPointer(e));
 
     if (pointers.current.size === 2 && pinchStart.current) {
-      // 双指捏合缩放
+      // 双指捏合缩放（捕获快照，避免 updater 延迟执行时 ref 已被置空）
       const [a, b] = [...pointers.current.values()];
       const dist = Math.hypot(a.x - b.x, a.y - b.y);
-      if (pinchStart.current.dist > 0) {
-        setView((v) => ({ ...v, k: clampK(pinchStart.current!.k * (dist / pinchStart.current!.dist)) }));
+      const ps = pinchStart.current;
+      if (ps.dist > 0) {
+        setView((v) => ({ ...v, k: clampK(ps.k * (dist / ps.dist)) }));
       }
       return;
     }
-    if (dragStart.current) {
+    const start = dragStart.current;
+    if (start) {
       const rect = svgRef.current?.getBoundingClientRect();
       const scale = rect ? Math.max(100, Math.round(exportW)) / rect.width : 1;
+      // 用局部快照 start，不直接读 ref（ref 可能在 updater 执行前被 pointerup 置空）
       setView(() => ({
-        k: dragStart.current!.view.k,
-        x: dragStart.current!.view.x + (e.clientX - dragStart.current!.x) * scale,
-        y: dragStart.current!.view.y + (e.clientY - dragStart.current!.y) * scale,
+        k: start.view.k,
+        x: start.view.x + (e.clientX - start.x) * scale,
+        y: start.view.y + (e.clientY - start.y) * scale,
       }));
     }
     // 桌面悬停 tooltip

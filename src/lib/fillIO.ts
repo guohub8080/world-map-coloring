@@ -9,19 +9,25 @@ import { worldFeatures } from "./worldData";
  * 颜色支持任意 CSS 值：#RGB / #RRGGBB / #RRGGBBAA / rgb() / rgba() / hsl() 等。
  */
 
-// 建立代码 → 中文名 的查找表
+// 建立代码 → 中文名 的查找表（惰性构建：数据异步加载后首次调用时填充）
 const CODE_TO_NAME: Record<string, string> = {};
 const NAME_SET = new Set<string>();
-for (const f of worldFeatures) {
-  const { name, iso_a3 } = f.properties as { name: string; iso_a3?: string; iso_a2?: string };
-  const iso_a2 = (f.properties as { iso_a2?: string }).iso_a2;
-  NAME_SET.add(name);
-  if (iso_a3) CODE_TO_NAME[iso_a3.toUpperCase()] = name;
-  if (iso_a2) CODE_TO_NAME[iso_a2.toUpperCase()] = name;
+let lookupBuilt = false;
+function ensureLookup() {
+  if (lookupBuilt) return;
+  lookupBuilt = true;
+  for (const f of worldFeatures) {
+    const { name, iso_a3 } = f.properties as { name: string; iso_a3?: string; iso_a2?: string };
+    const iso_a2 = (f.properties as { iso_a2?: string }).iso_a2;
+    NAME_SET.add(name);
+    if (iso_a3) CODE_TO_NAME[iso_a3.toUpperCase()] = name;
+    if (iso_a2) CODE_TO_NAME[iso_a2.toUpperCase()] = name;
+  }
 }
 
 /** 将键（中文名 / ISO a3 / ISO a2）解析为数据内的国家中文名；未匹配返回 null */
 export function resolveCountryKey(key: string): string | null {
+  ensureLookup();
   const k = key.trim();
   if (!k) return null;
   if (NAME_SET.has(k)) return k;
