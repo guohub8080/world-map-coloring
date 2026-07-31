@@ -14,7 +14,7 @@ function ColorField({
   return (
     <div className="flex items-center gap-2.5">
       <Label className="text-sm text-muted-foreground whitespace-nowrap">{label}</Label>
-      <ColorPicker value={value} onChange={onChange} withAlpha={false} className="w-9 h-9" />
+      <ColorPicker value={value} onChange={onChange} className="w-9 h-9" />
       <span className="text-xs text-muted-foreground font-mono uppercase">{value}</span>
     </div>
   );
@@ -38,7 +38,7 @@ export function StyleColorFields() {
 function BareColorField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
     <div className="flex items-center gap-2.5 h-8">
-      <ColorPicker value={value} onChange={onChange} withAlpha={false} className="w-8 h-8" />
+      <ColorPicker value={value} onChange={onChange} className="w-8 h-8" />
       <span className="text-xs text-muted-foreground font-mono uppercase">{value}</span>
     </div>
   );
