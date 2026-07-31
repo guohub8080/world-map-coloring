@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, useCallback, useEffect } from "react";
+import { memo, useMemo, useRef, useState, useCallback, useEffect } from "react";
 import { geoPath } from "d3-geo";
 import { useAtomValue, useSetAtom } from "jotai";
 import { worldFeatures, dashFeatures, worldFeatureCollection } from "../lib/worldData";
@@ -11,6 +11,46 @@ import {
 import { useIsMobile } from "../hooks/useIsMobile";
 
 interface View { x: number; y: number; k: number }
+
+interface CountryPathProps {
+  name: string;
+  fullName: string;
+  d: string;
+  fill: string;
+  stroke: string;
+  strokeWidth: number;
+  hovered: boolean;
+  hoverColor: string;
+  onPointerDown: (e: React.PointerEvent, name: string) => void;
+  onMouseEnter: (e: React.MouseEvent, fullName: string) => void;
+  onMouseLeave: () => void;
+  onClick: (name: string) => void;
+}
+
+/**
+ * 单个国家 path，用 memo 包裹：只有自身 props 变化才重渲染。
+ * 关键：去掉 transition-colors——否则改陆地色时 200+ path 同时触发
+ * CSS 过渡动画，GPU 合成爆炸导致卡顿。hover 换色用 fill 直接切换即可。
+ */
+const CountryPath = memo(function CountryPath({
+  name, fullName, d, fill, stroke, strokeWidth, hovered, hoverColor,
+  onPointerDown, onMouseEnter, onMouseLeave, onClick,
+}: CountryPathProps) {
+  return (
+    <path
+      d={d}
+      fill={hovered ? hoverColor : fill}
+      stroke={stroke}
+      strokeWidth={strokeWidth}
+      strokeLinejoin="round"
+      className="cursor-pointer"
+      onPointerDown={(e) => onPointerDown(e, name)}
+      onMouseEnter={(e) => onMouseEnter(e, fullName)}
+      onMouseLeave={onMouseLeave}
+      onClick={() => onClick(name)}
+    />
+  );
+});
 
 export default function WorldMap() {
   const fills = useAtomValue(fillsAtom);
@@ -148,11 +188,23 @@ export default function WorldMap() {
     }
   };
 
-  const onCountryPointerDown = (e: React.PointerEvent, name: string) => {
+  const onCountryPointerDown = useCallback((e: React.PointerEvent, name: string) => {
     if (e.pointerType !== "mouse") {
       tapStart.current = { x: e.clientX, y: e.clientY, name };
     }
-  };
+  }, []);
+
+  // 稳定的事件处理器（useCallback 保证引用不变，CountryPath 的 memo 才有效）
+  const onCountryMouseEnter = useCallback((e: React.MouseEvent, fullName: string) => {
+    setHovered(fullName);
+    const rect = svgRef.current?.getBoundingClientRect();
+    if (rect) setTooltip({ x: e.clientX - rect.left + 12, y: e.clientY - rect.top + 12, text: fullName });
+  }, []);
+  const onCountryMouseLeave = useCallback(() => {
+    setHovered(null);
+    setTooltip(null);
+  }, []);
+  const onCountryClick = useCallback((name: string) => applyFill(name), [applyFill]);
 
   // 屏幕显示与导出画布完全一致：SVG 元素本身即导出画布（viewBox 0 0 W H），
   // 画布以外区域用深色衬底（letterbox），体现真实的导出尺寸与比例
@@ -181,25 +233,20 @@ export default function WorldMap() {
           {/* 海洋底色：只覆盖画布（viewBox）本身，随缩放平移一起移动；画布外信箱区保持深色 */}
           <rect x={0} y={0} width={W} height={H} fill={seaColor} />
           {paths.countries.map((p) => (
-            <path
+            <CountryPath
               key={p.name}
+              name={p.name}
+              fullName={p.fullName}
               d={p.d}
-              fill={fills[p.name] || (hovered === p.fullName ? hoverColor : defaultColor)}
+              fill={fills[p.name] || defaultColor}
               stroke={borderColor}
               strokeWidth={borderWidth / view.k}
-              strokeLinejoin="round"
-              className="transition-colors duration-100 cursor-pointer"
-              onPointerDown={(e) => onCountryPointerDown(e, p.name)}
-              onMouseEnter={(e) => {
-                setHovered(p.fullName);
-                const rect = svgRef.current?.getBoundingClientRect();
-                if (rect) setTooltip({ x: e.clientX - rect.left + 12, y: e.clientY - rect.top + 12, text: p.fullName });
-              }}
-              onMouseLeave={() => {
-                setHovered(null);
-                setTooltip(null);
-              }}
-              onClick={() => applyFill(p.name)}
+              hovered={hovered === p.fullName}
+              hoverColor={hoverColor}
+              onPointerDown={onCountryPointerDown}
+              onMouseEnter={onCountryMouseEnter}
+              onMouseLeave={onCountryMouseLeave}
+              onClick={onCountryClick}
             />
           ))}
           {/* 南海十段线（不可填色，随边界色绘制） */}
