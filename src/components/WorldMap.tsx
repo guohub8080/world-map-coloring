@@ -29,8 +29,8 @@ interface CountryPathProps {
 
 /**
  * 单个国家 path，用 memo 包裹：只有自身 props 变化才重渲染。
- * 关键：去掉 transition-colors——否则改陆地色时 200+ path 同时触发
- * CSS 过渡动画，GPU 合成爆炸导致卡顿。hover 换色用 fill 直接切换即可。
+ * 每个 path 自带 stroke/strokeWidth（与导出 SVG 一致，便于编辑）。
+ * 去掉 transition-colors——否则改颜色时 200+ path 同时触发 CSS 过渡动画导致卡顿。
  */
 const CountryPath = memo(function CountryPath({
   name, fullName, d, fill, stroke, strokeWidth, hovered, hoverColor,
@@ -212,7 +212,7 @@ export default function WorldMap() {
   const H = Math.max(100, Math.round(exportH));
 
   return (
-    <div className="relative w-full h-full overflow-hidden bg-neutral-900">
+    <div className="relative w-full h-full overflow-hidden bg-neutral-800">
       <svg
         ref={svgRef}
         viewBox={`0 0 ${W} ${H}`}
