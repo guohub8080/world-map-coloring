@@ -6,7 +6,8 @@ import { getProjection } from "../lib/projections";
 import {
   fillsAtom, applyFillAtom, projectionIdAtom, centerLonAtom, centerLatAtom,
   exportWidthAtom, exportHeightAtom, exportPaddingAtom,
-  landColorAtom, seaColorAtom, borderColorAtom, borderWidthAtom, eraserAtom,
+  landColorAtom, seaColorAtom, borderColorAtom, borderWidthAtom,
+  dashColorAtom, dashWidthAtom, eraserAtom,
 } from "../atoms/mapAtoms";
 import { useIsMobile } from "../hooks/useIsMobile";
 
@@ -65,6 +66,8 @@ export default function WorldMap() {
   const seaColor = useAtomValue(seaColorAtom);
   const borderColor = useAtomValue(borderColorAtom);
   const borderWidth = useAtomValue(borderWidthAtom);
+  const dashColor = useAtomValue(dashColorAtom);
+  const dashWidth = useAtomValue(dashWidthAtom);
   const eraser = useAtomValue(eraserAtom);
   const isMobile = useIsMobile();
 
@@ -75,6 +78,8 @@ export default function WorldMap() {
   const deferredSeaColor = useDeferredValue(seaColor);
   const deferredBorderColor = useDeferredValue(borderColor);
   const deferredBorderWidth = useDeferredValue(borderWidth);
+  const deferredDashColor = useDeferredValue(dashColor);
+  const deferredDashWidth = useDeferredValue(dashWidth);
 
   const hoverColor = eraser ? "#fecaca" : "#fde68a";
 
@@ -128,8 +133,24 @@ export default function WorldMap() {
 
   const onWheel = useCallback((e: React.WheelEvent) => {
     e.preventDefault();
-    setView((v) => ({ ...v, k: clampK(v.k * (e.deltaY < 0 ? 1.15 : 1 / 1.15)) }));
-  }, []);
+    setView((v) => {
+      const k2 = clampK(v.k * (e.deltaY < 0 ? 1.15 : 1 / 1.15));
+      if (k2 === v.k) return v;
+      // 以鼠标位置为锚点缩放：把鼠标处的 viewBox 坐标点在缩放后保持在原位
+      const rect = svgRef.current?.getBoundingClientRect();
+      if (!rect) return { ...v, k: k2 };
+      // 屏幕坐标 → viewBox 坐标（meet 等比，W 对应 rect 宽度方向的实际绘制宽）
+      const scale = rect.width > 0 ? Math.max(100, Math.round(exportW)) / rect.width : 1;
+      const mx = (e.clientX - rect.left) * scale;
+      const my = (e.clientY - rect.top) * scale;
+      // 锚点不变：mx = point * k2 + x'  →  x' = mx - (mx - x) * k2 / k
+      return {
+        k: k2,
+        x: mx - (mx - v.x) * (k2 / v.k),
+        y: my - (my - v.y) * (k2 / v.k),
+      };
+    });
+  }, [exportW]);
 
   const getPointer = (e: React.PointerEvent) => ({ x: e.clientX, y: e.clientY });
 
@@ -257,9 +278,17 @@ export default function WorldMap() {
               onClick={onCountryClick}
             />
           ))}
-          {/* 南海十段线（不可填色，随边界色绘制） */}
+          {/* 南海十段线（独立样式：有宽度的线段，butt 平直端点，不响应交互） */}
           {paths.dashes.map((d, i) => (
-            <path key={`dash-${i}`} d={d} fill={deferredBorderColor} stroke="none" pointerEvents="none" />
+            <path
+              key={`dash-${i}`}
+              d={d}
+              fill="none"
+              stroke={deferredDashColor}
+              strokeWidth={deferredDashWidth / view.k}
+              strokeLinecap="butt"
+              pointerEvents="none"
+            />
           ))}
         </g>
       </svg>

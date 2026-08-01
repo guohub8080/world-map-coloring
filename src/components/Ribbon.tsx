@@ -5,6 +5,7 @@ import {
   mapTitleAtom, withLegendAtom, projectionIdAtom, centerLonAtom, centerLatAtom, resetCenterAtom,
   exportWidthAtom, exportHeightAtom, exportPaddingAtom,
   landColorAtom, seaColorAtom, borderColorAtom, borderWidthAtom,
+  dashColorAtom, dashWidthAtom,
   showImportAtom,
 } from "../atoms/mapAtoms";
 import { buildSvgString, downloadSvg } from "../lib/exportSvg";
@@ -25,7 +26,7 @@ import {
 } from "lucide-react";
 import ColorPalette from "./ColorPalette";
 import CenterLonSlider, { CenterLatSlider } from "./CenterLonSlider";
-import { LandField, SeaField, BorderField, StyleBorderField, StyleResetButton } from "./StylePanel";
+import { LandField, SeaField, BorderField, StyleBorderField, DashColorField, StyleDashField, StyleResetButton } from "./StylePanel";
 import { ImportForm } from "./ImportPanel";
 import { cn } from "@/lib/utils";
 
@@ -165,6 +166,10 @@ function StyleTab() {
       <Sep />
       <Field label="边界粗细"><StyleBorderField sliderClass="w-36" bare /></Field>
       <Sep />
+      <Field label="十段线颜色"><DashColorField /></Field>
+      <Sep />
+      <Field label="十段线粗细"><StyleDashField sliderClass="w-36" bare /></Field>
+      <Sep />
       <Field label="重置">
         <div className="flex items-center h-8"><StyleResetButton /></div>
       </Field>
@@ -214,6 +219,8 @@ function DataTab() {
   const seaColor = useAtomValue(seaColorAtom);
   const borderColor = useAtomValue(borderColorAtom);
   const borderWidth = useAtomValue(borderWidthAtom);
+  const dashColor = useAtomValue(dashColorAtom);
+  const dashWidth = useAtomValue(dashWidthAtom);
   const [showImport, setShowImport] = useAtom(showImportAtom);
   const [exportW, setExportW] = useAtom(exportWidthAtom);
   const [exportH, setExportH] = useAtom(exportHeightAtom);
@@ -222,7 +229,7 @@ function DataTab() {
   const exportSvg = () => {
     const svg = buildSvgString({
       fills, projectionId, centerLon, centerLat,
-      defaultColor: landColor, borderColor, borderWidth, seaColor,
+      defaultColor: landColor, borderColor, borderWidth, dashColor, dashWidth, seaColor,
       title: mapTitle.trim() || undefined,
       showLegend: withLegend,
       width: exportW, height: exportH, padding: exportPad,

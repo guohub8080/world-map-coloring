@@ -1,6 +1,7 @@
 import { useAtom, useSetAtom } from "jotai";
 import {
-  landColorAtom, seaColorAtom, borderColorAtom, borderWidthAtom, resetStyleAtom,
+  landColorAtom, seaColorAtom, borderColorAtom, borderWidthAtom,
+  dashColorAtom, dashWidthAtom, resetStyleAtom,
 } from "../atoms/mapAtoms";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
@@ -20,16 +21,18 @@ function ColorField({
   );
 }
 
-/** 三个颜色项 */
+/** 颜色项 */
 export function StyleColorFields() {
   const [land, setLand] = useAtom(landColorAtom);
   const [sea, setSea] = useAtom(seaColorAtom);
   const [border, setBorder] = useAtom(borderColorAtom);
+  const [dash, setDash] = useAtom(dashColorAtom);
   return (
     <>
       <ColorField label="陆地颜色" value={land} onChange={setLand} />
       <ColorField label="海洋颜色" value={sea} onChange={setSea} />
       <ColorField label="边界颜色" value={border} onChange={setBorder} />
+      <ColorField label="十段线颜色" value={dash} onChange={setDash} />
     </>
   );
 }
@@ -55,6 +58,10 @@ export function BorderField() {
   const [border, setBorder] = useAtom(borderColorAtom);
   return <BareColorField value={border} onChange={setBorder} />;
 }
+export function DashColorField() {
+  const [dash, setDash] = useAtom(dashColorAtom);
+  return <BareColorField value={dash} onChange={setDash} />;
+}
 
 /** 边界粗细 */
 export function StyleBorderField({ sliderClass = "w-32", bare = false }: { sliderClass?: string; bare?: boolean }) {
@@ -69,6 +76,23 @@ export function StyleBorderField({ sliderClass = "w-32", bare = false }: { slide
         onValueChange={([v]) => setBorderW(v)}
       />
       <span className="text-xs text-muted-foreground font-mono w-8">{borderW.toFixed(1)}</span>
+    </div>
+  );
+}
+
+/** 南海十段线粗细 */
+export function StyleDashField({ sliderClass = "w-32", bare = false }: { sliderClass?: string; bare?: boolean }) {
+  const [dashW, setDashW] = useAtom(dashWidthAtom);
+  return (
+    <div className={`flex items-center gap-2.5 ${bare ? "h-8" : ""}`}>
+      {!bare && <Label className="text-sm text-muted-foreground whitespace-nowrap">十段线粗细</Label>}
+      <Slider
+        className={sliderClass}
+        min={0} max={10} step={0.1}
+        value={[dashW]}
+        onValueChange={([v]) => setDashW(v)}
+      />
+      <span className="text-xs text-muted-foreground font-mono w-8">{dashW.toFixed(1)}</span>
     </div>
   );
 }
@@ -97,6 +121,7 @@ export function StyleFields({ sliderClass = "w-32", stack = false }: { sliderCla
     <>
       <StyleColorFields />
       <StyleBorderField sliderClass={sliderClass} />
+      <StyleDashField sliderClass={sliderClass} />
       <StyleResetButton />
     </>
   );
@@ -107,12 +132,15 @@ function ColorFieldStacked() {
   const [land, setLand] = useAtom(landColorAtom);
   const [sea, setSea] = useAtom(seaColorAtom);
   const [border, setBorder] = useAtom(borderColorAtom);
+  const [dash, setDash] = useAtom(dashColorAtom);
   return (
     <>
       <ColorField label="陆地颜色" value={land} onChange={setLand} />
       <ColorField label="海洋颜色" value={sea} onChange={setSea} />
       <ColorField label="边界颜色" value={border} onChange={setBorder} />
+      <ColorField label="十段线颜色" value={dash} onChange={setDash} />
       <StyleBorderField sliderClass="flex-1" />
+      <StyleDashField sliderClass="flex-1" />
       <div><StyleResetButton full /></div>
     </>
   );

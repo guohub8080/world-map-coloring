@@ -58,6 +58,10 @@ export const seaColorAtom = atomWithStorage<string>("wmf:sea", "#cfe8f3", Str, O
 export const borderColorAtom = atomWithStorage<string>("wmf:border", "#9ca3af", Str, ON_INIT);
 export const borderWidthAtom = atomWithStorage<number>("wmf:borderW", 0.6, Num, ON_INIT);
 
+/** 南海十段线样式（独立于国界） */
+export const dashColorAtom = atomWithStorage<string>("wmf:dashColor", "#9ca3af", Str, ON_INIT);
+export const dashWidthAtom = atomWithStorage<number>("wmf:dashW", 1.2, Num, ON_INIT);
+
 /** 导入面板展开状态（不持久化） */
 export const showImportAtom = atom<boolean>(false);
 
@@ -156,4 +160,6 @@ export const resetStyleAtom = atom(null, (_get, set) => {
   set(seaColorAtom, "#cfe8f3");
   set(borderColorAtom, "#9ca3af");
   set(borderWidthAtom, 0.6);
+  set(dashColorAtom, "#9ca3af");
+  set(dashWidthAtom, 1.2);
 });

@@ -10,6 +10,9 @@ interface ExportOptions {
   defaultColor: string;
   borderColor: string;
   borderWidth: number;
+  /** 南海十段线样式（独立于国界） */
+  dashColor: string;
+  dashWidth: number;
   seaColor: string;
   title?: string;
   showLegend?: boolean;
@@ -23,7 +26,7 @@ interface ExportOptions {
 export function buildSvgString(opts: ExportOptions): string {
   const {
     fills, projectionId, centerLon, centerLat = 0,
-    defaultColor, borderColor, borderWidth, seaColor, title, showLegend,
+    defaultColor, borderColor, borderWidth, dashColor, dashWidth, seaColor, title, showLegend,
     width = 1600, height = 900, padding = 10,
   } = opts;
   // 地图区域按用户设定的 viewBox 尺寸渲染；标题/图例等附加元素向底部扩展
@@ -62,11 +65,13 @@ export function buildSvgString(opts: ExportOptions): string {
       `<path d="${d}" fill="${fill}" stroke="${borderColor}" stroke-width="${borderWidth}" stroke-linejoin="round"><title>${escapeXml(name)}</title></path>`
     );
   }
-  // 南海十段线
+  // 南海十段线（独立样式：有宽度的线段，butt 平直端点）
   for (const f of dashFeatures) {
     const d = pathGen(f as unknown as GeoJSON.Feature);
     if (!d) continue;
-    parts.push(`<path d="${d}" fill="${borderColor}" stroke="none"/>`);
+    parts.push(
+      `<path d="${d}" fill="none" stroke="${dashColor}" stroke-width="${dashWidth}" stroke-linecap="butt"/>`
+    );
   }
   parts.push(`</g>`);
 

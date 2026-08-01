@@ -31,7 +31,8 @@ export interface CountryFeature {
     full_name?: string;
     iso_a3?: string;
   };
-  geometry: GeoJSON.Polygon | GeoJSON.MultiPolygon;
+  // 国家为面（Polygon/MultiPolygon）；南海十段线还原后为线（MultiLineString）
+  geometry: GeoJSON.Geometry;
 }
 
 function ringArea(coords: number[][][]): number {
@@ -45,9 +46,10 @@ function flipWinding(f: CountryFeature) {
   const flipRing = (ring: number[][]) => ring.reverse();
   if (f.geometry.type === "Polygon") {
     (f.geometry.coordinates as number[][][]).forEach(flipRing);
-  } else {
+  } else if (f.geometry.type === "MultiPolygon") {
     (f.geometry.coordinates as number[][][][]).forEach((poly) => poly.forEach(flipRing));
   }
+  // 线状几何（MultiLineString）无环绕方向，跳过
 }
 function prepare(fc: GeoJSON.FeatureCollection): CountryFeature[] {
   // d3-geo 采用球面多边形约定（外环顺时针），先按 RFC 7946 修正环绕方向
@@ -63,6 +65,35 @@ function prepare(fc: GeoJSON.FeatureCollection): CountryFeature[] {
     if (geoArea(f as unknown as GeoJSON.Feature) > 2 * Math.PI) flipWinding(f);
   }
   return rewound.features;
+}
+
+/**
+ * 南海十段线：带圆头帽的「粗线」条带多边形 → 2 点线段（MultiLineString）。
+ *
+ * dashline.json 每段是个闭合条带（两端带半圆帽），条带上距离最远的两个顶点
+ * 即为线段两端（圆弧帽的顶点）。取最远点对作中轴线，用 stroke 描边可得
+ * 真正「有宽度、端点平直」的线段（stroke-linecap="butt"）。
+ * 注意：不可假设前两个顶点是端点——不同段顶点起始顺序不一致，会取到边上的点。
+ */
+function dashPolysToLines(features: CountryFeature[]): void {
+  for (const f of features) {
+    if (f.geometry.type !== "MultiPolygon") continue;
+    const lines: number[][][] = [];
+    for (const poly of f.geometry.coordinates as number[][][][]) {
+      const ring = poly[0];
+      if (!ring || ring.length < 2) continue;
+      // 找距离最远的两个顶点（线段两端）
+      let i1 = 0, i2 = 1, maxD2 = -1;
+      for (let i = 0; i < ring.length; i++) {
+        for (let j = i + 1; j < ring.length; j++) {
+          const d2 = (ring[i][0] - ring[j][0]) ** 2 + (ring[i][1] - ring[j][1]) ** 2;
+          if (d2 > maxD2) { maxD2 = d2; i1 = i; i2 = j; }
+        }
+      }
+      lines.push([ring[i1], ring[i2]]);
+    }
+    f.geometry = { type: "MultiLineString", coordinates: lines };
+  }
 }
 
 // 数据放在 public/data/，运行时 fetch 拉取（不再打包进 JS）
@@ -96,6 +127,8 @@ export function ensureWorldDataLoaded(): Promise<void> {
     ]);
     worldFeatures.push(...prepare(worldData));
     dashFeatures.push(...prepare(dashData));
+    // 南海十段线：闭合条带多边形 → 2 点线段（MultiLineString），可 stroke 描边
+    dashPolysToLines(dashFeatures);
     // 同步填充 FeatureCollection 的 features 引用
     (worldFeatureCollection.features as GeoJSON.Feature[]).push(
       ...(worldFeatures as unknown as GeoJSON.Feature[])

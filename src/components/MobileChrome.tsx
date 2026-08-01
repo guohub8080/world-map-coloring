@@ -4,7 +4,7 @@ import {
   fillsAtom, currentColorAtom, eraserAtom, undoAtom, historyAtom,
   clearAllAtom, mapTitleAtom, withLegendAtom, projectionIdAtom, centerLonAtom, centerLatAtom, resetCenterAtom,
   exportWidthAtom, exportHeightAtom, exportPaddingAtom,
-  landColorAtom, seaColorAtom, borderColorAtom, borderWidthAtom, filledEntriesAtom,
+  landColorAtom, seaColorAtom, borderColorAtom, borderWidthAtom, dashColorAtom, dashWidthAtom, filledEntriesAtom,
 } from "../atoms/mapAtoms";
 import { buildSvgString, downloadSvg } from "../lib/exportSvg";
 import { fillsToJson, fillsToIsoObject, downloadJson } from "../lib/fillIO";
@@ -135,6 +135,8 @@ function DataSheet({ close }: { close: () => void }) {
   const seaColor = useAtomValue(seaColorAtom);
   const borderColor = useAtomValue(borderColorAtom);
   const borderWidth = useAtomValue(borderWidthAtom);
+  const dashColor = useAtomValue(dashColorAtom);
+  const dashWidth = useAtomValue(dashWidthAtom);
   const clearAll = useSetAtom(clearAllAtom);
   const [exportW, setExportW] = useAtom(exportWidthAtom);
   const [exportH, setExportH] = useAtom(exportHeightAtom);
@@ -143,7 +145,7 @@ function DataSheet({ close }: { close: () => void }) {
   const exportSvg = () => {
     const svg = buildSvgString({
       fills, projectionId, centerLon, centerLat,
-      defaultColor: landColor, borderColor, borderWidth, seaColor,
+      defaultColor: landColor, borderColor, borderWidth, dashColor, dashWidth, seaColor,
       title: mapTitle.trim() || undefined,
       showLegend: withLegend,
       width: exportW, height: exportH, padding: exportPad,
